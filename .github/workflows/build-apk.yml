@@ -18,13 +18,14 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: '8.6'
+      - name: Install Gradle 8.6 Directly (Bypass GitHub Cache Outage)
+        run: |
+          wget -q https://services.gradle.org/distributions/gradle-8.6-bin.zip -O /tmp/gradle.zip
+          sudo unzip -q -d /opt/gradle /tmp/gradle.zip
+          echo "/opt/gradle/gradle-8.6/bin" >> $GITHUB_PATH
 
       - name: Build Debug & Release APK
-        run: gradle assembleDebug assembleRelease
+        run: gradle assembleDebug assembleRelease --no-daemon --stacktrace
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
