@@ -42,20 +42,23 @@ class MjpegHttpOutput(private val port: Int = 8080) : VideoOutput {
 
     private fun handleClient(outputStream: OutputStream) {
         try {
-            val header = "HTTP/1.0 200 OK\r\n" +
-                    "Connection: close\r\n" +
-                    "Cache-Control: no-cache\r\n" +
-                    "Content-Type: multipart/x-mixed-replace; boundary=--alxenavframe\r\n\r\n"
+            val crlf = "\r\n"
+            val header = "HTTP/1.0 200 OK" + crlf +
+                    "Connection: close" + crlf +
+                    "Cache-Control: no-cache" + crlf +
+                    "Content-Type: multipart/x-mixed-replace; boundary=--alxenavframe" + crlf + crlf
             outputStream.write(header.toByteArray())
             outputStream.flush()
 
             while (isRunning) {
                 val jpegBytes = boundedQueue.poll()
                 if (jpegBytes != null) {
-                    val frameHeader = "--alxenavframe\r\nContent-Type: image/jpeg\r\nContent-Length: ${jpegBytes.size}\r\n\r\n"
+                    val frameHeader = "--alxenavframe" + crlf +
+                            "Content-Type: image/jpeg" + crlf +
+                            "Content-Length: ${jpegBytes.size}" + crlf + crlf
                     outputStream.write(frameHeader.toByteArray())
                     outputStream.write(jpegBytes)
-                    outputStream.write("\r\n".toByteArray())
+                    outputStream.write(crlf.toByteArray())
                     outputStream.flush()
                 } else {
                     Thread.sleep(15)

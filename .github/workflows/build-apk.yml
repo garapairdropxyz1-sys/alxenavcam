@@ -18,8 +18,10 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Install Gradle 8.6 Directly (Bypass GitHub Cache Outage)
+      - name: Prepare Android SDK & Gradle 8.6
         run: |
+          sudo chown -R $USER:$USER $ANDROID_HOME
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
           wget -q https://services.gradle.org/distributions/gradle-8.6-bin.zip -O /tmp/gradle.zip
           sudo unzip -q -d /opt/gradle /tmp/gradle.zip
           echo "/opt/gradle/gradle-8.6/bin" >> $GITHUB_PATH
