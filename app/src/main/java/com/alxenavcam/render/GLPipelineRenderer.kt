@@ -180,9 +180,12 @@ class GLPipelineRenderer(
                 buf = ByteBuffer.allocateDirect(capacity).order(ByteOrder.nativeOrder())
                 readbackBuffer = buf
             }
-            buf.position(0)
-            GLES20.glReadPixels(0, 0, viewportW, viewportH, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, buf)
-            onFrameBytesAvailable.invoke(buf, viewportW, viewportH)
+            val safeBuf = buf
+            if (safeBuf != null) {
+                safeBuf.position(0)
+                GLES20.glReadPixels(0, 0, viewportW, viewportH, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, safeBuf)
+                onFrameBytesAvailable.invoke(safeBuf, viewportW, viewportH)
+            }
         }
 
         val renderTimeMs = (SystemClock.elapsedRealtimeNanos() - startRenderNs) / 1_000_000f

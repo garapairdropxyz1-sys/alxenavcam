@@ -125,6 +125,8 @@ class VideoDecoder(
             var startWallClockNs = System.nanoTime()
             var basePtsUs = -1L
 
+            val currentCodec = codec ?: return
+
             while (isActive) {
                 if (isPaused) {
                     delay(16)
@@ -137,7 +139,7 @@ class VideoDecoder(
                 if (seekTarget >= 0L) {
                     pendingSeekUs = -1L
                     extractor.seekTo(seekTarget, MediaExtractor.SEEK_TO_CLOSEST_SYNC)
-                    codec.flush()
+                    currentCodec.flush()
                     isInputEOS = false
                     basePtsUs = -1L
                     startWallClockNs = System.nanoTime()
@@ -146,24 +148,24 @@ class VideoDecoder(
                 val decodeStartNs = SystemClock.elapsedRealtimeNanos()
 
                 if (!isInputEOS) {
-                    val inIndex = codec.dequeueInputBuffer(10_000)
+                    val inIndex = currentCodec.dequeueInputBuffer(10_000)
                     if (inIndex >= 0) {
-                        val inputBuffer = codec.getInputBuffer(inIndex)
+                        val inputBuffer = currentCodec.getInputBuffer(inIndex)
                         if (inputBuffer != null) {
                             val sampleSize = extractor.readSampleData(inputBuffer, 0)
                             if (sampleSize < 0) {
-                                codec.queueInputBuffer(inIndex, 0, 0, 0L, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
+                                currentCodec.queueInputBuffer(inIndex, 0, 0, 0L, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
                                 isInputEOS = true
                             } else {
                                 val sampleTimeUs = extractor.sampleTime
-                                codec.queueInputBuffer(inIndex, 0, sampleSize, sampleTimeUs, 0)
+                                currentCodec.queueInputBuffer(inIndex, 0, sampleSize, sampleTimeUs, 0)
                                 extractor.advance()
                             }
                         }
                     }
                 }
 
-                val outIndex = codec.dequeueOutputBuffer(bufferInfo, 10_000)
+                val outIndex = currentCodec.dequeueOutputBuffer(bufferInfo, 10_000)
                 if (outIndex >= 0) {
                     val decodeMs = (SystemClock.elapsedRealtimeNanos() - decodeStartNs) / 1_000_000f
                     val ptsUs = bufferInfo.presentationTimeUs
@@ -185,14 +187,14 @@ class VideoDecoder(
                         dropped = true
                     }
 
-                    codec.releaseOutputBuffer(outIndex, !dropped)
+                    currentCodec.releaseOutputBuffer(outIndex, !dropped)
                     onDecodeStat(decodeMs, dropped)
                     onProgressUpdate(ptsUs / 1000L, durationUs / 1000L)
 
                     if ((bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
                         if (isLooping) {
                             extractor.seekTo(0L, MediaExtractor.SEEK_TO_CLOSEST_SYNC)
-                            codec.flush()
+                            currentCodec.flush()
                             isInputEOS = false
                             basePtsUs = -1L
                         } else {
